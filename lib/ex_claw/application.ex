@@ -3,13 +3,18 @@ defmodule ExClaw.Application do
   OTP Application entry point for ExClaw.
 
   Supervision tree:
-  - Registry             — unique process registry for session GenServers
-  - ExClaw.Repo          — Ecto SQLite3 repository
-  - Tool.Supervisor      — DynamicSupervisor for isolated tool Tasks
-  - Session.Supervisor   — DynamicSupervisor for Agent Actors
-  - Watcher              — FileSystem watcher for FTS5 knowledge indexing
-  - Bootstrap.FileRouter — ETS cache of context files (SOUL.md, USER.md, etc.)
-  - LLM.Pool             — NimblePool for rate-limited LLM API calls
+  - Registry               — unique process registry for session GenServers
+  - EventBus               — duplicate Registry for pub/sub
+  - ExClaw.Repo            — Ecto SQLite3 repository
+  - Tool.RateLimiter       — ETS token bucket for per-(tool,user) rate limits
+  - Tool.Registry          — ETS-backed tool registry (registers all built-in tools)
+  - Tool.Supervisor        — Task.Supervisor for isolated tool execution
+  - Scheduler.Supervisor   — 4-lane concurrency control + per-session queues
+  - Session.Supervisor     — DynamicSupervisor for Agent Actors
+  - Watcher                — FileSystem watcher for FTS5 knowledge indexing
+  - Bootstrap.FileRouter   — ETS cache of context files (SOUL.md, USER.md, etc.)
+  - LLM.Pool               — NimblePool for rate-limited LLM API calls
+  - Gateway.Supervisor     — Bandit HTTP + WebSocket server
   """
   use Application
 
@@ -24,8 +29,13 @@ defmodule ExClaw.Application do
       ExClaw.EventBus,
       # Persistence
       ExClaw.Repo,
-      # Tool + session supervision
+      # Tool subsystem (registry before supervisor, rate limiter before registry)
+      ExClaw.Tool.RateLimiter,
+      ExClaw.Tool.Registry,
       {ExClaw.Tool.Supervisor, []},
+      # Scheduler (depends on Tool.Supervisor being up)
+      ExClaw.Scheduler.Supervisor,
+      # Session actors
       {ExClaw.Session.Supervisor, []},
       # Knowledge / context
       {ExClaw.Watcher, [path: knowledge_path]},

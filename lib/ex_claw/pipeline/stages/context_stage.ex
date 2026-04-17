@@ -7,7 +7,8 @@ defmodule ExClaw.Pipeline.Stages.ContextStage do
   2. User context files (USER.md)
   3. Default system prompt if no context files found
 
-  Also loads tool definitions from Tool.Runner (Phase 4 will upgrade to Tool.Registry).
+  Tool definitions are loaded from Tool.Registry (all registered tools).
+  If RunInput specifies a tools allow-list, only those definitions are loaded.
   """
   @behaviour ExClaw.Pipeline.Stage
 
@@ -17,7 +18,7 @@ defmodule ExClaw.Pipeline.Stages.ContextStage do
   @impl true
   def execute(%RunState{run_input: input} = state) do
     system_prompt = build_system_prompt(input.agent_id, input.user_id)
-    tools = load_tools()
+    tools = load_tools(input.tools)
 
     {:ok, %{state | system_prompt: system_prompt, tool_definitions: tools}}
   end
@@ -51,7 +52,7 @@ defmodule ExClaw.Pipeline.Stages.ContextStage do
     "You are a helpful AI assistant. You have access to tools to help you complete tasks."
   end
 
-  defp load_tools do
-    ExClaw.Tool.Runner.tool_definitions()
-  end
+  defp load_tools(nil), do: ExClaw.Tool.Registry.definitions()
+  defp load_tools([]),  do: ExClaw.Tool.Registry.definitions()
+  defp load_tools(names), do: ExClaw.Tool.Registry.definitions_for(names)
 end

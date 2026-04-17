@@ -19,3 +19,6 @@ config :ex_claw, ExClaw.Repo,
   pool_size: 5,
   # UUIDs stored as text strings
   migration_primary_key: [name: :id, type: :binary_id]
+
+# Environment-specific config overrides base config
+import_config "#{config_env()}.exs"

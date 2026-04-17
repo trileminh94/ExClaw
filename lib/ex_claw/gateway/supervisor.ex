@@ -20,9 +20,7 @@ defmodule ExClaw.Gateway.Supervisor do
       ExClaw.Gateway.RateLimiter,
       {Bandit,
        plug: ExClaw.HTTP.Router,
-       port: port,
-       websocket_enabled: true,
-       http: []}
+       port: port}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

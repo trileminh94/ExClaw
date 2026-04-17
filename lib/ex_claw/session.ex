@@ -25,7 +25,8 @@ defmodule ExClaw.Session do
     :user_id,
     :tenant_id,
     :run_input,
-    :pipeline_state,   # RunState.t() held while :awaiting_approval
+    # RunState.t() held while :awaiting_approval
+    :pipeline_state,
     messages: [],
     status: :idle,
     caller: nil
@@ -114,7 +115,10 @@ defmodule ExClaw.Session do
   end
 
   @impl true
-  def handle_cast({:approval, :granted}, %{status: :awaiting_approval, pipeline_state: ps} = state) do
+  def handle_cast(
+        {:approval, :granted},
+        %{status: :awaiting_approval, pipeline_state: ps} = state
+      ) do
     send(self(), {:resume_pipeline, ps})
     {:noreply, %{state | status: :thinking, pipeline_state: nil}}
   end
@@ -139,6 +143,7 @@ defmodule ExClaw.Session do
   @impl true
   def handle_info({:run_pipeline, stream_pid}, state) do
     run_input = %{state.run_input | stream_pid: stream_pid}
+
     case Executor.run(run_input, state.messages) do
       {:ok, content, updated_messages} ->
         reply_to_caller(state.caller, {:ok, content})

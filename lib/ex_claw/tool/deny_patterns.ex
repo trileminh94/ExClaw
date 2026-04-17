@@ -2,67 +2,52 @@ defmodule ExClaw.Tool.DenyPatterns do
   @moduledoc """
   Shell command deny-pattern groups.
 
-  Ten groups covering the most dangerous shell idioms. Each group has a name
-  (for logging), a list of compiled regexes, and a human-readable reason.
+  Ten groups covering the most dangerous shell idioms. Each group is a map
+  with :name, :reason, and :patterns (compiled regexes).
 
   Checked by Tool.Executor before running any :runtime group tool.
   """
 
-  defmodule Group do
-    defstruct [:name, :reason, :patterns]
-  end
-
   @groups [
-    %Group{
-      name: :rm_rf,
+    %{name: :rm_rf,
       reason: "recursive deletion",
-      patterns: [~r/rm\s+-[^\s]*r/i, ~r/rm\s+--recursive/i]
-    },
-    %Group{
-      name: :curl_pipe,
+      patterns: [~r/rm\s+-[^\s]*r/i, ~r/rm\s+--recursive/i]},
+
+    %{name: :curl_pipe,
       reason: "curl/wget piped to shell",
-      patterns: [~r/curl[^|]+\|\s*(ba|z|da)?sh/i, ~r/wget[^|]+\|\s*(ba|z|da)?sh/i]
-    },
-    %Group{
-      name: :fork_bomb,
+      patterns: [~r/curl[^|]+\|\s*(ba|z|da)?sh/i, ~r/wget[^|]+\|\s*(ba|z|da)?sh/i]},
+
+    %{name: :fork_bomb,
       reason: "fork bomb / process flood",
-      patterns: [~r/:\s*\(\s*\)\s*\{/, ~r/while\s+true.*do.*done/i]
-    },
-    %Group{
-      name: :privilege_escalation,
+      patterns: [~r/:\s*\(\s*\)\s*\{/, ~r/while\s+true.*do.*done/i]},
+
+    %{name: :privilege_escalation,
       reason: "privilege escalation",
-      patterns: [~r/\bsudo\b/, ~r/\bsu\s+-/, ~r/\bchmod\s+[0-7]*[46][0-7][0-7].*s/i]
-    },
-    %Group{
-      name: :disk_wipe,
+      patterns: [~r/\bsudo\b/, ~r/\bsu\s+-/, ~r/\bchmod\s+[0-7]*[46][0-7][0-7].*s/i]},
+
+    %{name: :disk_wipe,
       reason: "disk wipe / dd overwrite",
-      patterns: [~r/dd\s+if=\/dev\/(zero|urandom|null).*of=\/dev/i, ~r/mkfs\.\w+\s+\/dev/i]
-    },
-    %Group{
-      name: :network_scan,
+      patterns: [~r/dd\s+if=\/dev\/(zero|urandom|null).*of=\/dev/i, ~r/mkfs\.\w+\s+\/dev/i]},
+
+    %{name: :network_scan,
       reason: "network scanning",
-      patterns: [~r/\bnmap\b/i, ~r/\bmasscan\b/i, ~r/\bzmap\b/i]
-    },
-    %Group{
-      name: :path_traversal,
+      patterns: [~r/\bnmap\b/i, ~r/\bmasscan\b/i, ~r/\bzmap\b/i]},
+
+    %{name: :path_traversal,
       reason: "path traversal in shell",
-      patterns: [~r/\.\.[\/\\]\.\.[\/\\]/]
-    },
-    %Group{
-      name: :crontab_write,
+      patterns: [~r/\.\.[\/\\]\.\.[\/\\]/]},
+
+    %{name: :crontab_write,
       reason: "writing to crontab",
-      patterns: [~r/crontab\s+-[el]/i, ~r/>\s*\/etc\/cron/i]
-    },
-    %Group{
-      name: :hosts_write,
+      patterns: [~r/crontab\s+-[el]/i, ~r/>\s*\/etc\/cron/i]},
+
+    %{name: :hosts_write,
       reason: "modifying /etc/hosts or /etc/passwd",
-      patterns: [~r/>\s*\/etc\/(hosts|passwd|shadow|sudoers)/i]
-    },
-    %Group{
-      name: :process_kill_all,
+      patterns: [~r/>\s*\/etc\/(hosts|passwd|shadow|sudoers)/i]},
+
+    %{name: :process_kill_all,
       reason: "kill all processes",
-      patterns: [~r/killall\s+-[0-9]*\s*(9|KILL)\s*$/i, ~r/pkill\s+-9\s+\./i]
-    }
+      patterns: [~r/killall\s+-[0-9]*\s*(9|KILL)\s*$/i, ~r/pkill\s+-9\s+\./i]}
   ]
 
   @doc """
